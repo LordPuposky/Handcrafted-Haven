@@ -5,6 +5,7 @@
 ![Theme](https://img.shields.io/badge/Theme-Handmade%20Marketplace-7A9E7E?style=for-the-badge&labelColor=5C3D2E)
 
 **Handcrafted Haven — Group 6 Project for WDD 430**
+
 Team Members:
 
 - Nyantakyi Francis
@@ -16,10 +17,15 @@ Team Members:
 Our primary palette uses earthy, natural tones:
 
 ![Background Cream](https://img.shields.io/badge/Background-Cream-F5EFE6?style=flat-square) — main background color, soft and warm
+
 ![Primary Clay](https://img.shields.io/badge/Primary-Clay%20%2F%20Terracotta-C7724A?style=flat-square) — primary buttons, links, and call-to-action elements
+
 ![Heading Bark Brown](https://img.shields.io/badge/Headings-Bark%20Brown-5C3D2E?style=flat-square) — headings, navbar, footer
+
 ![Accent Sage](https://img.shields.io/badge/Accent-Sage%20Green-7A9E7E?style=flat-square) — accents, badges, tags
+
 ![Highlight Gold](https://img.shields.io/badge/Highlight-Warm%20Gold-C9A84C?style=flat-square) — highlights, star ratings, special labels
+
 ![Text Charcoal](https://img.shields.io/badge/Text-Charcoal-2C2018?style=flat-square) — body text
 
 ## Typography
