@@ -5,6 +5,7 @@
 ![Theme](https://img.shields.io/badge/Theme-Handmade%20Marketplace-7A9E7E?style=for-the-badge&labelColor=5C3D2E)
 
 **Handcrafted Haven — Group 6 Project for WDD 430**
+
 Team Members:
 
 - Nyantakyi Francis
