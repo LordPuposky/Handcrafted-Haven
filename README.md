@@ -11,6 +11,7 @@ Team Members:
 - Nyantakyi Francis
 - Amon Goes Roca
 - Yesid Augusto Romero Ruiz
+- Raphael Shawn Taurai
 
 ## Colors
 
