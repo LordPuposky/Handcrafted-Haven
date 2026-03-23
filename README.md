@@ -57,3 +57,55 @@ Sticky top navbar in Bark Brown with cream text. Logo on the left, links in the 
 8. Leave a Review — As a user, I want to leave a star rating and written review on a product.
 9. Responsive Design — As a mobile user, I want the site to look good on my phone.
 10. Navigation Menu — As a user, I want a clear navigation bar so I can move between pages easily.
+
+## Supabase Setup
+
+This project includes a Supabase framework with graceful fallback to local sample data.
+
+1. Open `.env.local`.
+2. Add your project values:
+	 - `NEXT_PUBLIC_SUPABASE_URL`
+	 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY`)
+	 - optional: `SUPABASE_SERVICE_ROLE_KEY`
+3. Run the app with `pnpm dev`.
+4. Check API connectivity at `/api/supabase/health`.
+
+Current integration files:
+
+- `src/lib/supabase/config.ts` - env handling
+- `src/lib/supabase/client.ts` - browser client
+- `src/lib/supabase/server.ts` - server/admin clients
+- `src/data/marketplace-supabase.ts` - Supabase-backed marketplace access
+
+### Starter SQL (Supabase SQL Editor)
+
+```sql
+create table if not exists sellers (
+	id text primary key,
+	name text not null,
+	location text not null,
+	specialty text not null,
+	bio text not null,
+	story text not null,
+	"avatarEmoji" text not null
+);
+
+create table if not exists products (
+	id text primary key,
+	"sellerId" text not null references sellers(id),
+	title text not null,
+	category text not null,
+	description text not null,
+	price numeric not null,
+	"imageEmoji" text not null,
+	featured boolean default false
+);
+
+create table if not exists reviews (
+	id text primary key,
+	"productId" text not null references products(id),
+	author text not null,
+	rating int not null check (rating >= 1 and rating <= 5),
+	comment text not null
+);
+```
