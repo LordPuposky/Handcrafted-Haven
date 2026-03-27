@@ -274,6 +274,10 @@ p {
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
 }
 
+.product-grid-catalog {
+  margin-top: 1rem;
+}
+
 .seller-grid {
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
 }
@@ -449,6 +453,13 @@ p {
 
   .details-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1024px) {
+  .product-grid-catalog {
+    grid-template-columns: repeat(auto-fill, minmax(230px, 280px));
+    justify-content: start;
   }
 }
 
