@@ -451,3 +451,35 @@ p {
     grid-template-columns: 1fr;
   }
 }
+
+.about-hero {
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.eyebrow {
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.5rem;
+  opacity: 0.8;
+}
+
+.about-intro {
+  margin-top: 1rem;
+  line-height: 1.7;
+  font-size: 1.05rem;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.panel {
+  padding: 1.5rem;
+  border-radius: 16px;
+}
