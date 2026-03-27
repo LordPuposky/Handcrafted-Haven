@@ -15,8 +15,16 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const params = await searchParams;
   const query = params.q?.trim().toLowerCase() ?? "";
   const category = params.category ?? "All";
-  const min = Number(params.min ?? "0");
-  const max = Number(params.max ?? "999999");
+  const min =
+    params.min && params.min.trim() !== "" && !Number.isNaN(Number(params.min))
+      ? Number(params.min)
+      : 0;
+  const max =
+    params.max && params.max.trim() !== "" && !Number.isNaN(Number(params.max))
+      ? Number(params.max)
+      : Number.POSITIVE_INFINITY;
+  const [normalizedMin, normalizedMax] =
+    min <= max ? [min, max] : [max, min];
   const sort = params.sort ?? "featured";
 
   const filtered = products
@@ -26,7 +34,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         product.title.toLowerCase().includes(query) ||
         product.description.toLowerCase().includes(query);
       const matchesCategory = category === "All" || product.category === category;
-      const matchesPrice = product.price >= min && product.price <= max;
+      const matchesPrice =
+        product.price >= normalizedMin && product.price <= normalizedMax;
 
       return matchesQuery && matchesCategory && matchesPrice;
     })
@@ -110,7 +119,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       </form>
 
       <p aria-live="polite">{filtered.length} product(s) found</p>
-      <div className="product-grid" style={{ marginTop: "1rem" }}>
+      <div className="product-grid product-grid-catalog">
         {filtered.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}

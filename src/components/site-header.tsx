@@ -9,7 +9,7 @@ const links = [
   { href: "/products", label: "Products" },
   { href: "/sellers", label: "Sellers" },
   { href: "/reviews", label: "Reviews" },
-  { href: "/about", label: "Community" },
+  { href: "/about", label: "About Us" },
 ];
 
 export function SiteHeader() {
