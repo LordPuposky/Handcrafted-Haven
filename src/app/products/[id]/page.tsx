@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { AddToCartButton } from "@/components/add-to-cart-button";
 import {
   formatPrice,
   getAverageRating,
@@ -36,6 +37,9 @@ export default async function ProductDetailsPage({ params }: ProductDetailsProps
           <p style={{ marginTop: "0.4rem" }}>
             Price: <strong>{formatPrice(product.price)}</strong>
           </p>
+          <div className="product-detail-add">
+            <AddToCartButton productId={product.id} />
+          </div>
           <p style={{ marginTop: "0.4rem" }}>
             Seller: <strong>{seller?.name ?? "Profile unavailable"}</strong>
           </p>

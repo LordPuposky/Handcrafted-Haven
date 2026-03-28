@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AddToCartButton } from "@/components/add-to-cart-button";
 import type { Product } from "@/data/marketplace";
 import { formatPrice, getAverageRating, getSellerById, getStars } from "@/data/marketplace";
 
@@ -31,6 +32,7 @@ export function ProductCard({ product }: ProductCardProps) {
         <Link className="btn-secondary" href={`/products/${product.id}`}>
           View details
         </Link>
+        <AddToCartButton productId={product.id} className="btn-primary" />
       </div>
     </article>
   );

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useCart } from "@/components/cart-provider";
 
 const links = [
   { href: "/", label: "Home" },
@@ -15,6 +16,7 @@ const links = [
 export function SiteHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { itemsCount } = useCart();
 
   return (
     <header className="site-header">
@@ -60,6 +62,11 @@ export function SiteHeader() {
         <div className="header-icons" aria-label="Quick actions">
           <Link className="icon-chip" href="/cart" aria-label="Cart">
             🛒
+            {itemsCount > 0 ? (
+              <span className="cart-count-badge" aria-label={`${itemsCount} item(s) in cart`}>
+                {itemsCount}
+              </span>
+            ) : null}
           </Link>
           <Link className="icon-chip" href="/profile" aria-label="Profile">
             👤
