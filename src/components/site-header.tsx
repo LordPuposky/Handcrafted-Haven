@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/components/cart-provider";
 
+type AuthUser = { name: string; email: string } | null;
+
 const links = [
   { href: "/", label: "Home" },
   { href: "/products", label: "Products" },
@@ -13,7 +15,7 @@ const links = [
   { href: "/about", label: "About Us" },
 ];
 
-export function SiteHeader() {
+export function SiteHeader({ user }: { user: AuthUser }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const { itemsCount } = useCart();
@@ -68,9 +70,20 @@ export function SiteHeader() {
               </span>
             ) : null}
           </Link>
-          <Link className="icon-chip" href="/profile" aria-label="Profile">
-            👤
-          </Link>
+          {user ? (
+            <Link
+              className="icon-chip icon-chip--avatar"
+              href="/profile"
+              aria-label={`Perfil de ${user.name}`}
+              title={user.name}
+            >
+              {user.name.charAt(0).toUpperCase()}
+            </Link>
+          ) : (
+            <Link className="icon-chip" href="/login" aria-label="Entrar">
+              👤
+            </Link>
+          )}
         </div>
       </div>
     </header>
