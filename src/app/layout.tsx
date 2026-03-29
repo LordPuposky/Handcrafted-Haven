@@ -3,6 +3,7 @@ import { Dancing_Script, Lato, Playfair_Display } from "next/font/google";
 import { CartProvider } from "@/components/cart-provider";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -39,11 +40,26 @@ export const metadata: Metadata = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await getSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const authUser = user
+    ? {
+        name:
+          user.user_metadata?.full_name ??
+          user.email?.split("@")[0] ??
+          "Usuário",
+        email: user.email ?? "",
+      }
+    : null;
+
   return (
     <html
       lang="en"
@@ -54,7 +70,7 @@ export default function RootLayout({
           <a className="skip-link" href="#main-content">
             Skip to main content
           </a>
-          <SiteHeader />
+          <SiteHeader user={authUser} />
           <main id="main-content" className="container page-shell">
             {children}
           </main>
