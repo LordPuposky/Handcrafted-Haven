@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useActionState } from "react";
 import { signup } from "@/app/actions/auth";
 
 export default function RegisterPage() {
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") ?? "/profile";
   const [state, action, pending] = useActionState(signup, undefined);
 
   return (
@@ -23,6 +26,8 @@ export default function RegisterPage() {
         )}
 
         <form action={action} className="auth-form" noValidate>
+          <input type="hidden" name="next" value={next} />
+
           <div className="field">
             <label htmlFor="name">Full name</label>
             <input
@@ -79,7 +84,7 @@ export default function RegisterPage() {
 
         <p className="auth-switch">
           Already have an account?{" "}
-          <Link href="/login">Sign in</Link>
+          <Link href={`/login?next=${encodeURIComponent(next)}`}>Sign in</Link>
         </p>
       </div>
     </div>

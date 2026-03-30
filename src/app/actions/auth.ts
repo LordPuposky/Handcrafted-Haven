@@ -28,12 +28,23 @@ async function upsertClientProfile(
   );
 }
 
+function getSafeRedirectTarget(formData: FormData) {
+  const requested = String(formData.get("next") ?? "").trim();
+
+  if (!requested.startsWith("/") || requested.startsWith("//")) {
+    return "/profile";
+  }
+
+  return requested;
+}
+
 // ── Registro ────────────────────────────────────────────────────────────────
 
 export async function signup(
   _prev: AuthFormState,
   formData: FormData
 ): Promise<AuthFormState> {
+  const nextTarget = getSafeRedirectTarget(formData);
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
@@ -79,7 +90,7 @@ export async function signup(
       email,
     });
 
-    redirect("/profile");
+    redirect(nextTarget);
   }
 
   return {
@@ -93,6 +104,7 @@ export async function login(
   _prev: AuthFormState,
   formData: FormData
 ): Promise<AuthFormState> {
+  const nextTarget = getSafeRedirectTarget(formData);
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
@@ -131,7 +143,7 @@ export async function login(
     });
   }
 
-  redirect("/profile");
+  redirect(nextTarget);
 }
 
 // ── Logout ───────────────────────────────────────────────────────────────────
