@@ -59,6 +59,41 @@ create table if not exists public.clients (
   "updatedAt" timestamptz not null default now()
 );
 create index if not exists clients_email_idx on public.clients (email);
+-- Orders
+create table if not exists public.orders (
+  id text primary key,
+  "clientId" uuid not null references public.clients(id) on delete cascade,
+  status text not null default 'pending',
+  subtotal numeric not null check (subtotal >= 0),
+  shipping numeric not null default 0 check (shipping >= 0),
+  tax numeric not null default 0 check (tax >= 0),
+  total numeric not null check (total >= 0),
+  currency text not null default 'BRL',
+  "shippingName" text not null,
+  "shippingEmail" text not null,
+  "shippingAddress" text not null,
+  "shippingCity" text not null,
+  "shippingState" text not null,
+  "shippingPostalCode" text not null,
+  notes text,
+  "createdAt" timestamptz not null default now(),
+  constraint orders_status_check check (status in ('pending', 'confirmed', 'cancelled'))
+);
+create index if not exists orders_client_id_idx on public.orders ("clientId");
+create index if not exists orders_created_at_idx on public.orders ("createdAt");
+-- Order Items
+create table if not exists public.order_items (
+  id text primary key,
+  "orderId" text not null references public.orders(id) on delete cascade,
+  "productId" text not null references public.products(id),
+  title text not null,
+  "unitPrice" numeric not null check ("unitPrice" >= 0),
+  quantity int not null check (quantity > 0),
+  "lineTotal" numeric not null check ("lineTotal" >= 0)
+);
+create index if not exists order_items_order_id_idx on public.order_items ("orderId");
+create index if not exists order_items_product_id_idx on public.order_items ("productId");
+-- Keep public.clients in sync with auth.users
 create or replace function public.handle_client_profile() returns trigger language plpgsql security definer
 set search_path = public as $$ begin
 insert into public.clients (id, name, email)
@@ -95,11 +130,14 @@ update
 set name = excluded.name,
   email = excluded.email,
   "updatedAt" = now();
--- RLS: allow public (anon) read access (the app uses the publishable/anon key).
+-- Enable RLS
 alter table public.sellers enable row level security;
 alter table public.products enable row level security;
 alter table public.reviews enable row level security;
 alter table public.clients enable row level security;
+alter table public.orders enable row level security;
+alter table public.order_items enable row level security;
+-- Public read policies
 do $$ begin if not exists (
   select 1
   from pg_policies
@@ -155,4 +193,34 @@ if not exists (
 update to authenticated using (auth.uid() = id) with check (auth.uid() = id);
 end if;
 end $$;
+-- Recreate order policies deterministically
+drop policy if exists "clients can read own orders" on public.orders;
+create policy "clients can read own orders" on public.orders for
+select to authenticated using (auth.uid() = "clientId");
+drop policy if exists "clients can insert own orders" on public.orders;
+create policy "clients can insert own orders" on public.orders for
+insert to authenticated with check (
+    auth.uid() is not null
+    and auth.uid() = "clientId"
+  );
+drop policy if exists "clients can read own order items" on public.order_items;
+create policy "clients can read own order items" on public.order_items for
+select to authenticated using (
+    exists (
+      select 1
+      from public.orders
+      where public.orders.id = "orderId"
+        and public.orders."clientId" = auth.uid()
+    )
+  );
+drop policy if exists "clients can insert own order items" on public.order_items;
+create policy "clients can insert own order items" on public.order_items for
+insert to authenticated with check (
+    exists (
+      select 1
+      from public.orders
+      where public.orders.id = "orderId"
+        and public.orders."clientId" = auth.uid()
+    )
+  );
 commit;

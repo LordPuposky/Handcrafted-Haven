@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useActionState } from "react";
 import { login } from "@/app/actions/auth";
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") ?? "/profile";
   const [state, action, pending] = useActionState(login, undefined);
 
   return (
@@ -53,6 +56,8 @@ export default function LoginPage() {
             )}
           </div>
 
+          <input type="hidden" name="next" value={next} />
+
           <button
             type="submit"
             className="btn-primary auth-submit"
@@ -64,7 +69,7 @@ export default function LoginPage() {
 
         <p className="auth-switch">
           Don't have an account?{" "}
-          <Link href="/register">Create account</Link>
+          <Link href={`/register?next=${encodeURIComponent(next)}`}>Create account</Link>
         </p>
       </div>
     </div>

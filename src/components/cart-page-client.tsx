@@ -40,7 +40,7 @@ export function CartPageClient({ products }: CartPageClientProps) {
 
   if (itemsWithProduct.length === 0) {
     return (
-      <section className="section-block">
+      <section className="section-block cart-empty-state">
         <h1>Cart</h1>
         <p className="cart-empty-text">Your cart is empty.</p>
         <Link className="btn-primary cart-empty-action" href="/products">
@@ -128,9 +128,9 @@ export function CartPageClient({ products }: CartPageClientProps) {
           </p>
           <p className="cart-summary-note">Shipping and taxes calculated at checkout.</p>
 
-          <button type="button" className="btn-primary" disabled>
+          <Link className="btn-primary" href="/checkout">
             Proceed to checkout
-          </button>
+          </Link>
         </aside>
       </div>
     </section>
