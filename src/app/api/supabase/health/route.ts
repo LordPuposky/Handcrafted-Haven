@@ -15,7 +15,7 @@ export async function GET() {
   }
 
   try {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { error } = await supabase.from("products").select("id", { head: true, count: "exact" });
 
     if (error) {

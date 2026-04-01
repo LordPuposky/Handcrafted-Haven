@@ -29,7 +29,7 @@ const localData: MarketplaceData = {
 };
 
 async function fetchTable<T>(table: "sellers" | "products" | "reviews") {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const { data, error } = await supabase.from(table).select("*");
 
   if (error) {

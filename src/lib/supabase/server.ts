@@ -9,7 +9,7 @@ export async function getSupabaseServerClient() {
   const { url, anonKey } = getSupabasePublicEnv();
   const cookieStore = await cookies();
 
-  return createServerClient(url, anonKey, {
+  return await createServerClient(url, anonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
