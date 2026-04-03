@@ -59,11 +59,15 @@ function normalizeReview(review: ProductReview & { rating: number | string }): P
   };
 }
 
-function mergeById<T extends { id: string }>(remote: T[], fallback: T[]) {
-  const merged = new Map(fallback.map((item) => [item.id, item]));
+function normalizeMergeKey(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function mergeByKey<T>(remote: T[], fallback: T[], getKey: (item: T) => string) {
+  const merged = new Map(fallback.map((item) => [normalizeMergeKey(getKey(item)), item]));
 
   for (const item of remote) {
-    merged.set(item.id, item);
+    merged.set(normalizeMergeKey(getKey(item)), item);
   }
 
   return Array.from(merged.values());
@@ -86,14 +90,24 @@ export const getMarketplaceData = cache(async (): Promise<MarketplaceData> => {
 
   return {
     sellers:
-      remoteSellers.length > 0 ? mergeById(remoteSellers, localData.sellers) : localData.sellers,
+      remoteSellers.length > 0
+        ? mergeByKey(remoteSellers, localData.sellers, (seller) => `${seller.name}::${seller.location}`)
+        : localData.sellers,
     products:
       remoteProducts.length > 0
-        ? mergeById(remoteProducts.map(normalizeProduct), localData.products)
+        ? mergeByKey(
+            remoteProducts.map(normalizeProduct),
+            localData.products,
+            (product) => `${product.title}::${product.category}::${product.description}`
+          )
         : localData.products,
     reviews:
       remoteReviews.length > 0
-        ? mergeById(remoteReviews.map(normalizeReview), localData.reviews)
+        ? mergeByKey(
+            remoteReviews.map(normalizeReview),
+            localData.reviews,
+            (review) => `${review.author}::${review.rating}::${review.comment}`
+          )
         : localData.reviews,
   };
 });
