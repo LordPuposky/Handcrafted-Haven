@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { ProductCard } from "@/components/product-card";
 import { SellerCard } from "@/components/seller-card";
-import { getFeaturedProducts, sellers } from "@/data/marketplace";
+import { getFeaturedProductsFromDb, getMarketplaceData } from "@/data/marketplace-supabase";
 
-export default function Home() {
-  const featuredProducts = getFeaturedProducts();
+export default async function Home() {
+  const [featuredProducts, { sellers }] = await Promise.all([
+    getFeaturedProductsFromDb(),
+    getMarketplaceData(),
+  ]);
   const highlightedSellers = sellers.slice(0, 3);
 
   return (

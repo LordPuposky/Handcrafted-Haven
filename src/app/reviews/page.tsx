@@ -1,7 +1,9 @@
-import { products, reviews } from "@/data/marketplace";
 import { ReviewPageClient } from "@/components/review-page-client";
+import { getMarketplaceData } from "@/data/marketplace-supabase";
 
-export default function ReviewsPage() {
+export default async function ReviewsPage() {
+  const { products, sellers, reviews } = await getMarketplaceData();
+
   return (
     <main className="page-shell">
       <div className="container">
@@ -24,7 +26,11 @@ export default function ReviewsPage() {
             review with a rating and comment.
           </p>
 
-          <ReviewPageClient products={products} initialReviews={reviews} />
+          <ReviewPageClient
+            products={products}
+            sellers={sellers}
+            initialReviews={reviews}
+          />
         </section>
       </div>
     </main>

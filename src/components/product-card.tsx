@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { AddToCartButton } from "@/components/add-to-cart-button";
 import type { Product } from "@/data/marketplace";
-import { formatPrice, getAverageRating, getSellerById, getStars } from "@/data/marketplace";
+import { formatPrice, getStars } from "@/data/marketplace";
+import { getAverageRatingFromDb, getSellerByIdFromDb } from "@/data/marketplace-supabase";
 
 type ProductCardProps = {
   product: Product;
 };
 
-export function ProductCard({ product }: ProductCardProps) {
-  const seller = getSellerById(product.sellerId);
-  const average = getAverageRating(product.id);
+export async function ProductCard({ product }: ProductCardProps) {
+  const [seller, average] = await Promise.all([
+    getSellerByIdFromDb(product.sellerId),
+    getAverageRatingFromDb(product.id),
+  ]);
 
   return (
     <article className="card" aria-label={`Product ${product.title}`}>

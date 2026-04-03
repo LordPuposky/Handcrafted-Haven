@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import type { Product, ProductReview, Seller } from "@/data/marketplace";
 import {
   categories,
@@ -30,7 +31,12 @@ const localData: MarketplaceData = {
 
 async function fetchTable<T>(table: "sellers" | "products" | "reviews") {
   const supabase = await getSupabaseServerClient();
-  const { data, error } = await supabase.from(table).select("*");
+  const baseQuery = supabase.from(table).select("*");
+  const query =
+    table === "products"
+      ? baseQuery.order("featured", { ascending: false }).order("id", { ascending: true })
+      : baseQuery.order("id", { ascending: true });
+  const { data, error } = await query;
 
   if (error) {
     throw error;
@@ -39,7 +45,21 @@ async function fetchTable<T>(table: "sellers" | "products" | "reviews") {
   return (data ?? []) as T[];
 }
 
-export async function getMarketplaceData(): Promise<MarketplaceData> {
+function normalizeProduct(product: Product & { price: number | string }): Product {
+  return {
+    ...product,
+    price: Number(product.price),
+  };
+}
+
+function normalizeReview(review: ProductReview & { rating: number | string }): ProductReview {
+  return {
+    ...review,
+    rating: Number(review.rating),
+  };
+}
+
+export const getMarketplaceData = cache(async (): Promise<MarketplaceData> => {
   if (!hasSupabasePublicEnv()) {
     return localData;
   }
@@ -47,20 +67,20 @@ export async function getMarketplaceData(): Promise<MarketplaceData> {
   try {
     const [remoteSellers, remoteProducts, remoteReviews] = await Promise.all([
       fetchTable<Seller>("sellers"),
-      fetchTable<Product>("products"),
-      fetchTable<ProductReview>("reviews"),
+      fetchTable<Product & { price: number | string }>("products"),
+      fetchTable<ProductReview & { rating: number | string }>("reviews"),
     ]);
 
     return {
       sellers: remoteSellers,
-      products: remoteProducts,
-      reviews: remoteReviews,
+      products: remoteProducts.map(normalizeProduct),
+      reviews: remoteReviews.map(normalizeReview),
     };
   } catch {
     // Keep the app functional while Supabase schema/keys are still being configured.
     return localData;
   }
-}
+});
 
 export async function getSellerByIdFromDb(id: string) {
   const data = await getMarketplaceData();

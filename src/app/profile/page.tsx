@@ -132,6 +132,10 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 })}
               </dd>
             </div>
+            <div>
+              <dt>Profile role</dt>
+              <dd>{user.user_metadata?.role ?? "User"}</dd>
+            </div>
           </dl>
         </div>
 

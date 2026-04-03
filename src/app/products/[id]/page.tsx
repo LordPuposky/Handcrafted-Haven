@@ -1,13 +1,12 @@
 import { notFound } from "next/navigation";
 import { AddToCartButton } from "@/components/add-to-cart-button";
+import { formatPrice, getStars } from "@/data/marketplace";
 import {
-  formatPrice,
-  getAverageRating,
-  getProductById,
-  getReviewsByProductId,
-  getSellerById,
-  getStars,
-} from "@/data/marketplace";
+  getAverageRatingFromDb,
+  getProductByIdFromDb,
+  getReviewsByProductIdFromDb,
+  getSellerByIdFromDb,
+} from "@/data/marketplace-supabase";
 
 type ProductDetailsProps = {
   params: Promise<{ id: string }>;
@@ -15,15 +14,17 @@ type ProductDetailsProps = {
 
 export default async function ProductDetailsPage({ params }: ProductDetailsProps) {
   const { id } = await params;
-  const product = getProductById(id);
+  const product = await getProductByIdFromDb(id);
 
   if (!product) {
     notFound();
   }
 
-  const seller = getSellerById(product.sellerId);
-  const productReviews = getReviewsByProductId(product.id);
-  const average = getAverageRating(product.id);
+  const [seller, productReviews, average] = await Promise.all([
+    getSellerByIdFromDb(product.sellerId),
+    getReviewsByProductIdFromDb(product.id),
+    getAverageRatingFromDb(product.id),
+  ]);
 
   return (
     <section className="section-block">

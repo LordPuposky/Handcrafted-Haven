@@ -1,6 +1,8 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getSiteUrl } from "@/lib/supabase/config";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export type AuthFormState =
@@ -40,6 +42,21 @@ function getSafeRedirectTarget(formData: FormData) {
   return requested;
 }
 
+async function getAuthCallbackUrl(nextTarget: string) {
+  const headerStore = await headers();
+  const host =
+    headerStore.get("x-forwarded-host") ?? headerStore.get("host") ?? null;
+  const protocol =
+    headerStore.get("x-forwarded-proto") ??
+    (host?.includes("localhost") ? "http" : "https");
+  const origin = host ? `${protocol}://${host}` : getSiteUrl();
+  const callbackUrl = new URL("/auth/callback", origin);
+
+  callbackUrl.searchParams.set("next", nextTarget);
+
+  return callbackUrl.toString();
+}
+
 // ── Registro ────────────────────────────────────────────────────────────────
 
 export async function signup(
@@ -76,10 +93,14 @@ export async function signup(
   }
 
   const supabase = await getSupabaseServerClient();
+  const emailRedirectTo = await getAuthCallbackUrl(nextTarget);
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: name, role } }, 
+    options: {
+      data: { full_name: name, role },
+      emailRedirectTo,
+    },
   });
 
   if (error) {

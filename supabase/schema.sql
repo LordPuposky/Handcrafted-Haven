@@ -169,6 +169,21 @@ if not exists (
   select 1
   from pg_policies
   where schemaname = 'public'
+    and tablename = 'reviews'
+    and policyname = 'public can insert reviews'
+) then create policy "public can insert reviews" on public.reviews for
+insert to anon,
+  authenticated with check (
+    length(btrim(author)) >= 2
+    and length(btrim(comment)) >= 8
+    and rating >= 1
+    and rating <= 5
+  );
+end if;
+if not exists (
+  select 1
+  from pg_policies
+  where schemaname = 'public'
     and tablename = 'clients'
     and policyname = 'clients can read own profile'
 ) then create policy "clients can read own profile" on public.clients for

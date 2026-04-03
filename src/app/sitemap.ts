@@ -1,8 +1,9 @@
 import type { MetadataRoute } from "next";
-import { products, sellers } from "@/data/marketplace";
+import { getMarketplaceData } from "@/data/marketplace-supabase";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://handcrafted-haven.example";
+  const { products, sellers } = await getMarketplaceData();
 
   const staticRoutes: MetadataRoute.Sitemap = [
     "",

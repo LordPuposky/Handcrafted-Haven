@@ -1,21 +1,25 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { Product, ProductReview } from "@/data/marketplace";
-import { formatPrice, getStars, getSellerById } from "@/data/marketplace";
+import { useRouter } from "next/navigation";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import { submitReview } from "@/app/actions/reviews";
+import type { Product, ProductReview, Seller } from "@/data/marketplace";
+import { formatPrice, getStars } from "@/data/marketplace";
 
 type Props = {
   products: Product[];
+  sellers: Seller[];
   initialReviews: ProductReview[];
 };
 
-export function ReviewPageClient({ products, initialReviews }: Props) {
+export function ReviewPageClient({ products, sellers, initialReviews }: Props) {
+  const router = useRouter();
   const [selectedProductId, setSelectedProductId] = useState(products[0]?.id ?? "");
   const [reviewList, setReviewList] = useState<ProductReview[]>(initialReviews);
   const [author, setAuthor] = useState("");
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
-  const [message, setMessage] = useState("");
+  const [state, formAction, pending] = useActionState(submitReview, undefined);
 
   const selectedProduct = useMemo(
     () => products.find((product) => product.id === selectedProductId),
@@ -23,7 +27,7 @@ export function ReviewPageClient({ products, initialReviews }: Props) {
   );
 
   const selectedSeller = selectedProduct
-    ? getSellerById(selectedProduct.sellerId)
+    ? sellers.find((seller) => seller.id === selectedProduct.sellerId)
     : undefined;
 
   const productReviews = useMemo(
@@ -44,28 +48,33 @@ export function ReviewPageClient({ products, initialReviews }: Props) {
     return Number((total / selected.length).toFixed(1));
   }, [reviewList, selectedProductId]);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  useEffect(() => {
+    setReviewList(initialReviews);
+  }, [initialReviews]);
 
-    if (!selectedProductId || !author.trim() || !comment.trim()) {
-      setMessage("Please fill in your name and comment.");
+  useEffect(() => {
+    if (!state?.success || !state.review) {
       return;
     }
 
-    const newReview: ProductReview = {
-      id: `r${Date.now()}`,
-      productId: selectedProductId,
-      author: author.trim(),
-      rating,
-      comment: comment.trim(),
-    };
+    const submittedReview = state.review;
 
-    setReviewList((current) => [newReview, ...current]);
+    setReviewList((current) => {
+      if (current.some((review) => review.id === submittedReview.id)) {
+        return current;
+      }
+
+      return [submittedReview, ...current];
+    });
     setAuthor("");
     setRating(5);
     setComment("");
-    setMessage("Review submitted successfully.");
-  }
+    router.refresh();
+  }, [router, state]);
+
+  const feedbackClassName = state?.message
+    ? `review-feedback ${state.success ? "review-feedback--success" : "review-feedback--error"}`
+    : undefined;
 
   return (
     <div className="details-grid">
@@ -79,13 +88,15 @@ export function ReviewPageClient({ products, initialReviews }: Props) {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "grid", gap: "1rem" }}>
+        <form action={formAction} className="review-form" aria-busy={pending}>
           <div className="field">
             <label htmlFor="product">Select product</label>
             <select
               id="product"
+              name="productId"
               value={selectedProductId}
               onChange={(event) => setSelectedProductId(event.target.value)}
+              disabled={pending}
             >
               {products.map((product) => (
                 <option key={product.id} value={product.id}>
@@ -93,6 +104,9 @@ export function ReviewPageClient({ products, initialReviews }: Props) {
                 </option>
               ))}
             </select>
+            {state?.errors?.productId ? (
+              <span className="field-error">{state.errors.productId[0]}</span>
+            ) : null}
           </div>
 
           {selectedProduct && (
@@ -121,11 +135,17 @@ export function ReviewPageClient({ products, initialReviews }: Props) {
             <label htmlFor="author">Your name</label>
             <input
               id="author"
+              name="author"
               type="text"
               value={author}
               onChange={(event) => setAuthor(event.target.value)}
               placeholder="Enter your name"
+              required
+              disabled={pending}
             />
+            {state?.errors?.author ? (
+              <span className="field-error">{state.errors.author[0]}</span>
+            ) : null}
           </div>
 
           <div
@@ -139,8 +159,10 @@ export function ReviewPageClient({ products, initialReviews }: Props) {
               <label htmlFor="rating">Rating</label>
               <select
                 id="rating"
+                name="rating"
                 value={rating}
                 onChange={(event) => setRating(Number(event.target.value))}
+                disabled={pending}
               >
                 <option value={5}>5 - Excellent</option>
                 <option value={4}>4 - Very good</option>
@@ -148,6 +170,9 @@ export function ReviewPageClient({ products, initialReviews }: Props) {
                 <option value={2}>2 - Fair</option>
                 <option value={1}>1 - Poor</option>
               </select>
+              {state?.errors?.rating ? (
+                <span className="field-error">{state.errors.rating[0]}</span>
+              ) : null}
             </div>
 
             <div className="panel" style={{ padding: "0.9rem" }}>
@@ -162,26 +187,33 @@ export function ReviewPageClient({ products, initialReviews }: Props) {
             <label htmlFor="comment">Comment</label>
             <textarea
               id="comment"
+              name="comment"
               value={comment}
               onChange={(event) => setComment(event.target.value)}
               rows={5}
               placeholder="Write your review"
+              required
+              disabled={pending}
             />
+            {state?.errors?.comment ? (
+              <span className="field-error">{state.errors.comment[0]}</span>
+            ) : null}
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              gap: "0.75rem",
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <button type="submit" className="btn-primary">
-              Submit Review
+          <div className="review-submit-row">
+            <button type="submit" className="btn-primary" disabled={pending}>
+              {pending ? "Saving review..." : "Submit Review"}
             </button>
 
-            {message ? <p>{message}</p> : null}
+            {state?.message ? (
+              <p
+                className={feedbackClassName}
+                role="status"
+                aria-live="polite"
+              >
+                {state.message}
+              </p>
+            ) : null}
           </div>
         </form>
       </section>

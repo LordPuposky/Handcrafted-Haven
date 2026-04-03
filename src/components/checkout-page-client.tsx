@@ -5,16 +5,19 @@ import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useMemo } from "react";
 import { placeOrder } from "@/app/actions/checkout";
 import { useCart } from "@/components/cart-provider";
-import { formatPrice, products } from "@/data/marketplace";
+import type { Product } from "@/data/marketplace";
+import { formatPrice } from "@/data/marketplace";
 
 type CheckoutPageClientProps = {
   initialName: string;
   initialEmail: string;
+  products: Product[];
 };
 
 export function CheckoutPageClient({
   initialName,
   initialEmail,
+  products,
 }: CheckoutPageClientProps) {
   const router = useRouter();
   const { items, clearCart } = useCart();
@@ -37,7 +40,7 @@ export function CheckoutPageClient({
           };
         })
         .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)),
-    [items]
+    [items, products]
   );
 
   const subtotal = useMemo(
