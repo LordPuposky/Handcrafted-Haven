@@ -1,6 +1,8 @@
 import { CartPageClient } from "@/components/cart-page-client";
-import { products } from "@/data/marketplace";
+import { getMarketplaceData } from "@/data/marketplace-supabase";
 
-export default function CartPage() {
+export default async function CartPage() {
+  const { products } = await getMarketplaceData();
+
   return <CartPageClient products={products} />;
 }

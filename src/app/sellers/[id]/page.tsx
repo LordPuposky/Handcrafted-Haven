@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
-import { getProductsBySellerId, getSellerById } from "@/data/marketplace";
+import { getProductsBySellerIdFromDb, getSellerByIdFromDb } from "@/data/marketplace-supabase";
 
 type SellerDetailsProps = {
   params: Promise<{ id: string }>;
@@ -8,13 +8,13 @@ type SellerDetailsProps = {
 
 export default async function SellerDetailsPage({ params }: SellerDetailsProps) {
   const { id } = await params;
-  const seller = getSellerById(id);
+  const seller = await getSellerByIdFromDb(id);
 
   if (!seller) {
     notFound();
   }
 
-  const sellerProducts = getProductsBySellerId(seller.id);
+  const sellerProducts = await getProductsBySellerIdFromDb(seller.id);
 
   return (
     <section className="section-block">

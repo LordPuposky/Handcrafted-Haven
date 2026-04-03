@@ -165,6 +165,14 @@ if not exists (
 ) then create policy "public read" on public.reviews for
 select using (true);
 end if;
+drop policy if exists "public can insert reviews" on public.reviews;
+create policy "public can insert reviews" on public.reviews for
+insert to authenticated with check (
+    length(btrim(author)) >= 2
+    and length(btrim(comment)) >= 8
+    and rating >= 1
+    and rating <= 5
+  );
 if not exists (
   select 1
   from pg_policies

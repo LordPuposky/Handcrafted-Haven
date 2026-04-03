@@ -1,7 +1,8 @@
 import { SellerCard } from "@/components/seller-card";
-import { sellers } from "@/data/marketplace";
+import { getMarketplaceData } from "@/data/marketplace-supabase";
 
-export default function SellersPage() {
+export default async function SellersPage() {
+  const { sellers } = await getMarketplaceData();
   return (
     <section className="section-block">
       <h1>Seller profiles</h1>

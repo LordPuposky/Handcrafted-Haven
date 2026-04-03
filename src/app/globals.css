@@ -411,6 +411,38 @@ p {
   padding: 1rem;
 }
 
+.review-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.review-submit-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.review-feedback {
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.review-feedback--success {
+  background: #e8f5ea;
+  border-color: #abd0b2;
+  color: #2d6a39;
+}
+
+.review-feedback--error {
+  background: #fce8e4;
+  border-color: #e8b6ad;
+  color: #7a2e24;
+}
+
 .review-list {
   display: grid;
   gap: 0.75rem;
@@ -737,6 +769,10 @@ p {
   border: 1px solid #e8b6ad;
   color: #7a2e24;
   font-size: 0.95rem;
+}
+
+.auth-badge-center {
+  justify-self: center;
 }
 
 .auth-form {

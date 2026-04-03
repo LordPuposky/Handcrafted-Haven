@@ -1,5 +1,5 @@
 import { ProductCard } from "@/components/product-card";
-import { categories, products } from "@/data/marketplace";
+import { categoriesFromDb, getMarketplaceData } from "@/data/marketplace-supabase";
 
 type ProductsPageProps = {
   searchParams: Promise<{
@@ -13,6 +13,7 @@ type ProductsPageProps = {
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const params = await searchParams;
+  const { products } = await getMarketplaceData();
   const query = params.q?.trim().toLowerCase() ?? "";
   const category = params.category ?? "All";
   const min =
@@ -72,7 +73,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         <div className="field">
           <label htmlFor="category">Category</label>
           <select id="category" name="category" defaultValue={category}>
-            {categories.map((item) => (
+            {categoriesFromDb.map((item) => (
               <option key={item} value={item}>
                 {item}
               </option>
