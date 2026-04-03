@@ -6,7 +6,8 @@
 
 **Handcrafted Haven — Group 6 Project for WDD 430**
 
-Deployment link : https://handcrafted-haven-red.vercel.app/
+- **Production URL:** `https://handcrafted-haven-red.vercel.app/`
+- **Local URL:** `http://localhost:3000`
 
 Team Members:
 
@@ -62,56 +63,78 @@ Sticky top navbar in Bark Brown with cream text. Logo on the left, links in the 
 
 ## Supabase Setup
 
-This project includes a Supabase framework with graceful fallback to local sample data.
+This project uses Supabase for authentication, seller/product data, reviews, and order persistence. If the public Supabase variables are missing, the app falls back to local sample data.
 
-1. Open `.env.local`.
-2. Add your project values:
-	 - `NEXT_PUBLIC_SUPABASE_URL`
-	 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY`)
-	 - optional: `SUPABASE_SERVICE_ROLE_KEY`
-3. Run the app with `pnpm dev`.
-4. Check API connectivity at `/api/supabase/health`.
+### 1) Environment variables
 
-Current integration files:
+Create a `.env.local` file in the project root and add:
 
-- `src/lib/supabase/config.ts` - env handling
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your-project-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+> You can also use `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` instead of `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+
+For the deployed site, set:
+
+```bash
+NEXT_PUBLIC_SITE_URL=https://handcrafted-haven-red.vercel.app/
+```
+
+### 2) Database setup
+
+In the Supabase SQL Editor, run these files in order:
+
+1. `supabase/schema.sql`
+2. `supabase/seed.sql`
+
+This creates and seeds the main tables used by the app:
+
+- `sellers`
+- `products`
+- `reviews`
+- `clients`
+- `orders`
+- `order_items`
+
+### 3) Configure authentication callback URLs
+
+In **Supabase Dashboard → Authentication → URL Configuration**, set:
+
+**Site URL**
+
+- `https://handcrafted-haven-red.vercel.app/`
+
+**Additional Redirect URLs**
+
+- `http://localhost:3000/auth/callback`
+- `https://handcrafted-haven-red.vercel.app/auth/callback`
+- `http://localhost:3000`
+
+These URLs are required so email confirmation and auth redirects can return correctly to the app route:
+
+- `src/app/auth/callback/route.ts`
+
+### 4) Run the app
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Then open:
+
+- Local: `http://localhost:3000`
+- Production: `https://handcrafted-haven-red.vercel.app/`
+
+Optional connectivity check:
+
+- `http://localhost:3000/api/supabase/health`
+
+### Supabase integration files
+
+- `src/lib/supabase/config.ts` - environment and site URL handling
 - `src/lib/supabase/client.ts` - browser client
 - `src/lib/supabase/server.ts` - server/admin clients
 - `src/data/marketplace-supabase.ts` - Supabase-backed marketplace access
-
-### Starter SQL (Supabase SQL Editor)
-
-Use the canonical schema in [supabase/schema.sql](supabase/schema.sql).
-
-Quick copy/paste (same as the file):
-
-```sql
-create table if not exists sellers (
-	id text primary key,
-	name text not null,
-	location text not null,
-	specialty text not null,
-	bio text not null,
-	story text not null,
-	"avatarEmoji" text not null
-);
-
-create table if not exists products (
-	id text primary key,
-	"sellerId" text not null references sellers(id),
-	title text not null,
-	category text not null,
-	description text not null,
-	price numeric not null,
-	"imageEmoji" text not null,
-	featured boolean not null default false
-);
-
-create table if not exists reviews (
-	id text primary key,
-	"productId" text not null references products(id),
-	author text not null,
-	rating int not null check (rating >= 1 and rating <= 5),
-	comment text not null
-);
-```

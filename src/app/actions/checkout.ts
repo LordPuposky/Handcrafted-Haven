@@ -1,6 +1,6 @@
 "use server";
 
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getCurrentAuthContext } from "@/lib/auth/authorization";
 
 type CheckoutItemPayload = {
   productId: string;
@@ -121,14 +121,17 @@ export async function placeOrder(
     return { values, message: "Your cart is empty or invalid." };
   }
 
-  const supabase = await getSupabaseServerClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const { supabase, user, role } = await getCurrentAuthContext();
 
-  if (userError || !user) {
+  if (!user) {
     return { values, message: "Please sign in before checking out." };
+  }
+
+  if (role !== "buyer") {
+    return {
+      values,
+      message: "Seller accounts cannot place orders or use checkout.",
+    };
   }
 
   // Ensure the buyer profile exists even if the auth trigger/schema wasn't applied yet.

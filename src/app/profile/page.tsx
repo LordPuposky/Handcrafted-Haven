@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { logout } from "@/app/actions/auth";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth/authorization";
 
 const ORDER_STATUSES = ["pending", "confirmed", "cancelled"] as const;
 type OrderStatus = (typeof ORDER_STATUSES)[number];
@@ -45,50 +44,42 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const selectedStatus: OrderStatus | "all" =
     params.status && isOrderStatus(params.status) ? params.status : "all";
 
-  const supabase = await getSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user, client, role } = await requireUser("/profile");
 
-  if (!user) {
-    redirect("/login");
-  }
-
-  const name =
-    user.user_metadata?.full_name ??
-    user.email?.split("@")[0] ??
-    "User";
+  const name = client?.name ?? user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "User";
 
   let orders: OrderRow[] = [];
   let orderItemsByOrderId = new Map<string, OrderItemRow[]>();
 
-  const { data: ordersData, error: ordersError } = await supabase
-    .from("orders")
-    .select("id, status, total, currency, createdAt")
-    .eq("clientId", user.id)
-    .order("createdAt", { ascending: false });
+  if (role === "buyer") {
+    const { data: ordersData, error: ordersError } = await supabase
+      .from("orders")
+      .select("id, status, total, currency, createdAt")
+      .eq("clientId", user.id)
+      .order("createdAt", { ascending: false });
 
-  if (!ordersError && ordersData) {
-    orders = ordersData as OrderRow[];
+    if (!ordersError && ordersData) {
+      orders = ordersData as OrderRow[];
 
-    if (orders.length > 0) {
-      const orderIds = orders.map((order) => order.id);
-      const { data: orderItemsData, error: orderItemsError } = await supabase
-        .from("order_items")
-        .select("id, orderId, title, quantity, lineTotal")
-        .in("orderId", orderIds)
-        .order("id", { ascending: true });
+      if (orders.length > 0) {
+        const orderIds = orders.map((order) => order.id);
+        const { data: orderItemsData, error: orderItemsError } = await supabase
+          .from("order_items")
+          .select("id, orderId, title, quantity, lineTotal")
+          .in("orderId", orderIds)
+          .order("id", { ascending: true });
 
-      if (!orderItemsError && orderItemsData) {
-        const grouped = new Map<string, OrderItemRow[]>();
+        if (!orderItemsError && orderItemsData) {
+          const grouped = new Map<string, OrderItemRow[]>();
 
-        for (const item of orderItemsData as OrderItemRow[]) {
-          const current = grouped.get(item.orderId) ?? [];
-          current.push(item);
-          grouped.set(item.orderId, current);
+          for (const item of orderItemsData as OrderItemRow[]) {
+            const current = grouped.get(item.orderId) ?? [];
+            current.push(item);
+            grouped.set(item.orderId, current);
+          }
+
+          orderItemsByOrderId = grouped;
         }
-
-        orderItemsByOrderId = grouped;
       }
     }
   }
@@ -134,9 +125,24 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             </div>
             <div>
               <dt>Profile role</dt>
-              <dd>{user.user_metadata?.role ?? "User"}</dd>
+              <dd>{role === "seller" ? "Seller" : "Buyer"}</dd>
             </div>
           </dl>
+
+          {role === "seller" ? (
+            <div className="profile-seller-cta">
+              <p>Your seller account is focused on publishing products and managing your storefront.</p>
+              <p>Shopping features and order history stay unavailable while you are using a seller account.</p>
+              <div className="profile-seller-actions">
+                <Link className="btn-primary" href="/seller">
+                  Open seller area
+                </Link>
+                <Link className="btn-secondary" href="/seller/profile">
+                  Edit public profile
+                </Link>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <form action={logout}>
@@ -146,89 +152,91 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         </form>
       </div>
 
-      <section className="profile-orders section-block">
-        <div className="section-title-row">
-          <h2>Your orders</h2>
+      {role === "buyer" ? (
+        <section className="profile-orders section-block">
+          <div className="section-title-row">
+            <h2>Your orders</h2>
 
-          <nav className="profile-orders-filters" aria-label="Filter orders by status">
-            <Link
-              href="/profile"
-              className={`profile-filter-chip ${selectedStatus === "all" ? "is-active" : ""}`}
-            >
-              All
-            </Link>
-            <Link
-              href="/profile?status=pending"
-              className={`profile-filter-chip ${selectedStatus === "pending" ? "is-active" : ""}`}
-            >
-              Pending
-            </Link>
-            <Link
-              href="/profile?status=confirmed"
-              className={`profile-filter-chip ${selectedStatus === "confirmed" ? "is-active" : ""}`}
-            >
-              Confirmed
-            </Link>
-            <Link
-              href="/profile?status=cancelled"
-              className={`profile-filter-chip ${selectedStatus === "cancelled" ? "is-active" : ""}`}
-            >
-              Cancelled
-            </Link>
-          </nav>
-        </div>
-
-        {filteredOrders.length === 0 ? (
-          <p className="profile-orders-empty">
-            {orders.length === 0
-              ? "No orders yet. Your next purchase will appear here."
-              : "No orders found for this status."}
-          </p>
-        ) : (
-          <div className="profile-orders-list">
-            {filteredOrders.map((order) => {
-              const orderItems = orderItemsByOrderId.get(order.id) ?? [];
-
-              return (
-                <article key={order.id} className="panel profile-order-card">
-                  <div className="profile-order-top">
-                    <p className="profile-order-id">
-                      Order <strong>#{order.id.slice(0, 8).toUpperCase()}</strong>
-                    </p>
-                    <p className={`profile-order-status is-${order.status}`}>
-                      {order.status}
-                    </p>
-                  </div>
-
-                  <p className="profile-order-date">
-                    Placed on {new Date(order.createdAt).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </p>
-
-                  <div className="profile-order-items">
-                    {orderItems.map((item) => (
-                      <p key={item.id} className="profile-order-item-row">
-                        <span>
-                          {item.title} x{item.quantity}
-                        </span>
-                        <strong>{formatOrderMoney(item.lineTotal, order.currency)}</strong>
-                      </p>
-                    ))}
-                  </div>
-
-                  <p className="profile-order-total">
-                    <span>Total</span>
-                    <strong>{formatOrderMoney(order.total, order.currency)}</strong>
-                  </p>
-                </article>
-              );
-            })}
+            <nav className="profile-orders-filters" aria-label="Filter orders by status">
+              <Link
+                href="/profile"
+                className={`profile-filter-chip ${selectedStatus === "all" ? "is-active" : ""}`}
+              >
+                All
+              </Link>
+              <Link
+                href="/profile?status=pending"
+                className={`profile-filter-chip ${selectedStatus === "pending" ? "is-active" : ""}`}
+              >
+                Pending
+              </Link>
+              <Link
+                href="/profile?status=confirmed"
+                className={`profile-filter-chip ${selectedStatus === "confirmed" ? "is-active" : ""}`}
+              >
+                Confirmed
+              </Link>
+              <Link
+                href="/profile?status=cancelled"
+                className={`profile-filter-chip ${selectedStatus === "cancelled" ? "is-active" : ""}`}
+              >
+                Cancelled
+              </Link>
+            </nav>
           </div>
-        )}
-      </section>
+
+          {filteredOrders.length === 0 ? (
+            <p className="profile-orders-empty">
+              {orders.length === 0
+                ? "No orders yet. Your next purchase will appear here."
+                : "No orders found for this status."}
+            </p>
+          ) : (
+            <div className="profile-orders-list">
+              {filteredOrders.map((order) => {
+                const orderItems = orderItemsByOrderId.get(order.id) ?? [];
+
+                return (
+                  <article key={order.id} className="panel profile-order-card">
+                    <div className="profile-order-top">
+                      <p className="profile-order-id">
+                        Order <strong>#{order.id.slice(0, 8).toUpperCase()}</strong>
+                      </p>
+                      <p className={`profile-order-status is-${order.status}`}>
+                        {order.status}
+                      </p>
+                    </div>
+
+                    <p className="profile-order-date">
+                      Placed on {new Date(order.createdAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </p>
+
+                    <div className="profile-order-items">
+                      {orderItems.map((item) => (
+                        <p key={item.id} className="profile-order-item-row">
+                          <span>
+                            {item.title} x{item.quantity}
+                          </span>
+                          <strong>{formatOrderMoney(item.lineTotal, order.currency)}</strong>
+                        </p>
+                      ))}
+                    </div>
+
+                    <p className="profile-order-total">
+                      <span>Total</span>
+                      <strong>{formatOrderMoney(order.total, order.currency)}</strong>
+                    </p>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      ) : null}
     </section>
   );
 }

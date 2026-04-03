@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { signup } from "@/app/actions/auth";
 
 export default function RegisterPage() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/profile";
   const [state, action, pending] = useActionState(signup, undefined);
+  const [selectedRole, setSelectedRole] = useState("");
+  const showSellerNote = selectedRole === "seller";
 
   return (
     <div className="auth-shell">
@@ -71,18 +73,35 @@ export default function RegisterPage() {
             {state?.errors?.password && (
               <span className="field-error">{state.errors.password[0]}</span>
             )}
-          </div> <div className="field">
+          </div>
+
+          <div className="field">
             <label htmlFor="role">I am a:</label>
-            <select id="role" name="role" required>
+            <select
+              id="role"
+              name="role"
+              defaultValue=""
+              onChange={(event) => setSelectedRole(event.target.value)}
+              required
+            >
               <option value="">Select an option</option>
               <option value="buyer">Buyer</option>
               <option value="seller">Seller</option>
-              </select>
-              {state?.errors?.role && (
-                <span className="field-error">{state.errors.role[0]}</span>
-                )}
-                </div>
-          
+            </select>
+            {state?.errors?.role && (
+              <span className="field-error">{state.errors.role[0]}</span>
+            )}
+          </div>
+
+          {showSellerNote ? (
+            <div className="panel auth-role-note" role="note" aria-live="polite">
+              <strong>Seller account selected</strong>
+              <p>
+                Keep signup simple for now — you can personalize your public seller
+                profile right after registration inside the Seller Area.
+              </p>
+            </div>
+          ) : null}
 
           <button
             type="submit"

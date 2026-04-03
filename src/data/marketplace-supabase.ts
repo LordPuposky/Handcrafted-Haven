@@ -59,27 +59,57 @@ function normalizeReview(review: ProductReview & { rating: number | string }): P
   };
 }
 
+function normalizeMergeKey(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function mergeByKey<T>(remote: T[], fallback: T[], getKey: (item: T) => string) {
+  const merged = new Map(fallback.map((item) => [normalizeMergeKey(getKey(item)), item]));
+
+  for (const item of remote) {
+    merged.set(normalizeMergeKey(getKey(item)), item);
+  }
+
+  return Array.from(merged.values());
+}
+
 export const getMarketplaceData = cache(async (): Promise<MarketplaceData> => {
   if (!hasSupabasePublicEnv()) {
     return localData;
   }
 
-  try {
-    const [remoteSellers, remoteProducts, remoteReviews] = await Promise.all([
-      fetchTable<Seller>("sellers"),
-      fetchTable<Product & { price: number | string }>("products"),
-      fetchTable<ProductReview & { rating: number | string }>("reviews"),
-    ]);
+  const [sellersResult, productsResult, reviewsResult] = await Promise.allSettled([
+    fetchTable<Seller>("sellers"),
+    fetchTable<Product & { price: number | string }>("products"),
+    fetchTable<ProductReview & { rating: number | string }>("reviews"),
+  ]);
 
-    return {
-      sellers: remoteSellers,
-      products: remoteProducts.map(normalizeProduct),
-      reviews: remoteReviews.map(normalizeReview),
-    };
-  } catch {
-    // Keep the app functional while Supabase schema/keys are still being configured.
-    return localData;
-  }
+  const remoteSellers = sellersResult.status === "fulfilled" ? sellersResult.value : [];
+  const remoteProducts = productsResult.status === "fulfilled" ? productsResult.value : [];
+  const remoteReviews = reviewsResult.status === "fulfilled" ? reviewsResult.value : [];
+
+  return {
+    sellers:
+      remoteSellers.length > 0
+        ? mergeByKey(remoteSellers, localData.sellers, (seller) => `${seller.name}::${seller.location}`)
+        : localData.sellers,
+    products:
+      remoteProducts.length > 0
+        ? mergeByKey(
+            remoteProducts.map(normalizeProduct),
+            localData.products,
+            (product) => `${product.title}::${product.category}::${product.description}`
+          )
+        : localData.products,
+    reviews:
+      remoteReviews.length > 0
+        ? mergeByKey(
+            remoteReviews.map(normalizeReview),
+            localData.reviews,
+            (review) => `${review.author}::${review.rating}::${review.comment}`
+          )
+        : localData.reviews,
+  };
 });
 
 export async function getSellerByIdFromDb(id: string) {

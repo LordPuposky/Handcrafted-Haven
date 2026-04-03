@@ -12,45 +12,67 @@ export default async function Home() {
 
   return (
     <>
-      <section className="hero">
-        <p className="hero-kicker">crafted with heart</p>
-        <h1>Discover handcrafted treasures at Handcrafted Haven.</h1>
-        <p>
-          We connect passionate makers with conscious shoppers. Explore unique
-          pieces, learn each artisan story, and shop with confidence.
-        </p>
-        <div className="hero-actions">
-          <Link className="btn-primary" href="/products">
-            Explore products
-          </Link>
-          <Link className="btn-secondary" href="/sellers">
-            Meet artisans
-          </Link>
+      <section className="section-block seller-dashboard-shell">
+        <div className="hero home-hero-panel">
+          <div className="seller-dashboard-header home-hero-header">
+            <div className="seller-dashboard-intro home-hero-intro">
+              <p className="hero-kicker">crafted with heart</p>
+              <h1>Discover handcrafted treasures at Handcrafted Haven.</h1>
+              <p>
+                We connect passionate makers with conscious shoppers. Explore unique
+                pieces, learn each artisan story, and shop with confidence.
+              </p>
+            </div>
+            <div className="seller-dashboard-actions home-hero-actions">
+              <Link className="btn-primary" href="/products">
+                Explore products
+              </Link>
+              <Link className="btn-secondary" href="/sellers">
+                Meet artisans
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="section-block">
-        <div className="section-title-row">
-          <h2>Weekly highlights</h2>
-          <Link href="/products">View full catalog</Link>
-        </div>
-        <div className="product-grid" aria-label="Featured products">
-          {featuredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+      <section className="section-block seller-dashboard-shell">
+        <article className="panel home-showcase-panel">
+          <div className="section-title-row">
+            <div className="home-section-copy">
+              <span className="badge">Curated picks</span>
+              <h2>Weekly highlights</h2>
+              <p>
+                A polished selection of artisan-made pieces chosen for warmth, texture, and charm.
+              </p>
+            </div>
+            <Link href="/products">View full catalog</Link>
+          </div>
+          <div className="product-grid home-product-grid" aria-label="Featured products">
+            {featuredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </article>
       </section>
 
-      <section className="section-block">
-        <div className="section-title-row">
-          <h2>Featured artisans</h2>
-          <Link href="/sellers">View all profiles</Link>
-        </div>
-        <div className="seller-grid">
-          {highlightedSellers.map((seller) => (
-            <SellerCard key={seller.id} seller={seller} />
-          ))}
-        </div>
+      <section className="section-block seller-dashboard-shell">
+        <article className="panel home-showcase-panel">
+          <div className="section-title-row">
+            <div className="home-section-copy">
+              <span className="badge">Maker spotlight</span>
+              <h2>Featured artisans</h2>
+              <p>
+                Meet a few of the independent studios behind this week&apos;s standout finds.
+              </p>
+            </div>
+            <Link href="/sellers">View all profiles</Link>
+          </div>
+          <div className="seller-grid home-seller-grid">
+            {highlightedSellers.map((seller) => (
+              <SellerCard key={seller.id} seller={seller} />
+            ))}
+          </div>
+        </article>
       </section>
     </>
   );

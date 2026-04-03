@@ -3,7 +3,7 @@ import { Dancing_Script, Lato, Playfair_Display } from "next/font/google";
 import { CartProvider } from "@/components/cart-provider";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getCurrentAuthContext } from "@/lib/auth/authorization";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -45,18 +45,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await getSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, client, role } = await getCurrentAuthContext();
 
   const authUser = user
     ? {
-        name:
-          user.user_metadata?.full_name ??
-          user.email?.split("@")[0] ??
-          "Usuário",
+        name: client?.name ?? user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "Usuário",
         email: user.email ?? "",
+        role,
       }
     : null;
 

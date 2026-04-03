@@ -1,17 +1,9 @@
-import { redirect } from "next/navigation";
 import { CheckoutPageClient } from "@/components/checkout-page-client";
 import { getMarketplaceData } from "@/data/marketplace-supabase";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { requireBuyer } from "@/lib/auth/authorization";
 
 export default async function CheckoutPage() {
-  const supabase = await getSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login?next=/checkout");
-  }
+  const { user } = await requireBuyer("/checkout");
 
   const initialName =
     user.user_metadata?.full_name ??

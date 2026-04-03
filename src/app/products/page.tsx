@@ -53,78 +53,92 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     });
 
   return (
-    <section className="section-block">
-      <h1>Handcrafted product catalog</h1>
-      <p>
-        Browse by category, price range, and keyword to find the perfect item.
-      </p>
-
-      <form className="filters" role="search" aria-label="Product filters">
-        <div className="field">
-          <label htmlFor="q">Search</label>
-          <input
-            id="q"
-            name="q"
-            defaultValue={params.q ?? ""}
-            placeholder="Ex: vase, bag, notebook"
-          />
+    <section className="section-block seller-dashboard-shell">
+      <article className="panel product-catalog-panel">
+        <div className="product-catalog-intro">
+          <span className="badge">Curated catalog</span>
+          <h1>Handcrafted product catalog</h1>
+          <p>
+            Browse by category, price range, and keyword to find the perfect handmade piece.
+          </p>
         </div>
 
-        <div className="field">
-          <label htmlFor="category">Category</label>
-          <select id="category" name="category" defaultValue={category}>
-            {categoriesFromDb.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
+        <form
+          className="filters product-filter-panel"
+          role="search"
+          aria-label="Product filters"
+        >
+          <div className="field">
+            <label htmlFor="q">Search</label>
+            <input
+              id="q"
+              name="q"
+              defaultValue={params.q ?? ""}
+              placeholder="Ex: vase, bag, notebook"
+            />
+          </div>
+
+          <div className="field">
+            <label htmlFor="category">Category</label>
+            <select id="category" name="category" defaultValue={category}>
+              {categoriesFromDb.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field">
+            <label htmlFor="min">Minimum price (R$)</label>
+            <input
+              id="min"
+              name="min"
+              type="number"
+              min={0}
+              step={1}
+              defaultValue={params.min ?? ""}
+            />
+          </div>
+
+          <div className="field">
+            <label htmlFor="max">Maximum price (R$)</label>
+            <input
+              id="max"
+              name="max"
+              type="number"
+              min={0}
+              step={1}
+              defaultValue={params.max ?? ""}
+            />
+          </div>
+
+          <div className="field">
+            <label htmlFor="sort">Sort by</label>
+            <select id="sort" name="sort" defaultValue={sort}>
+              <option value="featured">Featured</option>
+              <option value="price-asc">Lowest price</option>
+              <option value="price-desc">Highest price</option>
+            </select>
+          </div>
+
+          <button className="btn-primary" type="submit">
+            Apply filters
+          </button>
+        </form>
+
+        <div className="product-results-shell">
+          <p className="product-results-count" aria-live="polite">
+            {filtered.length} product(s) found
+          </p>
+
+          <div className="product-grid product-grid-catalog product-results-grid">
+            {filtered.map((product) => (
+              <ProductCard key={product.id} product={product} />
             ))}
-          </select>
+          </div>
         </div>
-
-        <div className="field">
-          <label htmlFor="min">Minimum price (R$)</label>
-          <input
-            id="min"
-            name="min"
-            type="number"
-            min={0}
-            step={1}
-            defaultValue={params.min ?? ""}
-          />
-        </div>
-
-        <div className="field">
-          <label htmlFor="max">Maximum price (R$)</label>
-          <input
-            id="max"
-            name="max"
-            type="number"
-            min={0}
-            step={1}
-            defaultValue={params.max ?? ""}
-          />
-        </div>
-
-        <div className="field">
-          <label htmlFor="sort">Sort by</label>
-          <select id="sort" name="sort" defaultValue={sort}>
-            <option value="featured">Featured</option>
-            <option value="price-asc">Lowest price</option>
-            <option value="price-desc">Highest price</option>
-          </select>
-        </div>
-
-        <button className="btn-primary" type="submit">
-          Apply filters
-        </button>
-      </form>
-
-      <p aria-live="polite">{filtered.length} product(s) found</p>
-      <div className="product-grid product-grid-catalog">
-        {filtered.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+      </article>
     </section>
   );
 }

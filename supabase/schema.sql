@@ -54,11 +54,24 @@ create table if not exists public.clients (
   id uuid primary key references auth.users(id) on delete cascade,
   name text not null,
   email text not null unique,
+  role text not null default 'buyer',
   "avatarEmoji" text not null default '👤',
   "createdAt" timestamptz not null default now(),
-  "updatedAt" timestamptz not null default now()
+  "updatedAt" timestamptz not null default now(),
+  constraint clients_role_check check (role in ('buyer', 'seller'))
 );
 create index if not exists clients_email_idx on public.clients (email);
+alter table public.clients
+add column if not exists role text not null default 'buyer';
+do $$ begin if not exists (
+  select 1
+  from pg_constraint
+  where conname = 'clients_role_check'
+) then
+alter table public.clients
+add constraint clients_role_check check (role in ('buyer', 'seller'));
+end if;
+end $$;
 -- Orders
 create table if not exists public.orders (
   id text primary key,
@@ -96,7 +109,7 @@ create index if not exists order_items_product_id_idx on public.order_items ("pr
 -- Keep public.clients in sync with auth.users
 create or replace function public.handle_client_profile() returns trigger language plpgsql security definer
 set search_path = public as $$ begin
-insert into public.clients (id, name, email)
+insert into public.clients (id, name, email, role)
 values (
     new.id,
     coalesce(
@@ -104,12 +117,43 @@ values (
       split_part(new.email, '@', 1),
       'User'
     ),
-    new.email
+    new.email,
+    case
+      when coalesce(new.raw_user_meta_data->>'role', 'buyer') = 'seller' then 'seller'
+      else 'buyer'
+    end
   ) on conflict (id) do
 update
 set name = excluded.name,
   email = excluded.email,
+  role = excluded.role,
   "updatedAt" = now();
+if coalesce(new.raw_user_meta_data->>'role', 'buyer') = 'seller' then
+insert into public.sellers (
+    id,
+    name,
+    location,
+    specialty,
+    bio,
+    story,
+    "avatarEmoji"
+  )
+values (
+    new.id::text,
+    coalesce(
+      new.raw_user_meta_data->>'full_name',
+      split_part(new.email, '@', 1),
+      'Seller'
+    ),
+    'New artisan on Handcrafted Haven',
+    'Handcrafted creations',
+    'Recently joined Handcrafted Haven as a verified seller.',
+    'This artisan is setting up their storefront and will soon share more details about their creative journey.',
+    '🧵'
+  ) on conflict (id) do
+update
+set name = excluded.name;
+end if;
 return new;
 end;
 $$;
@@ -117,19 +161,48 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
 after
 insert on auth.users for each row execute procedure public.handle_client_profile();
-insert into public.clients (id, name, email)
+insert into public.clients (id, name, email, role)
 select users.id,
   coalesce(
     users.raw_user_meta_data->>'full_name',
     split_part(users.email, '@', 1),
     'User'
   ),
-  users.email
+  users.email,
+  case
+    when coalesce(users.raw_user_meta_data->>'role', 'buyer') = 'seller' then 'seller'
+    else 'buyer'
+  end
 from auth.users as users on conflict (id) do
 update
 set name = excluded.name,
   email = excluded.email,
+  role = excluded.role,
   "updatedAt" = now();
+insert into public.sellers (
+    id,
+    name,
+    location,
+    specialty,
+    bio,
+    story,
+    "avatarEmoji"
+  )
+select users.id::text,
+  coalesce(
+    users.raw_user_meta_data->>'full_name',
+    split_part(users.email, '@', 1),
+    'Seller'
+  ),
+  'New artisan on Handcrafted Haven',
+  'Handcrafted creations',
+  'Recently joined Handcrafted Haven as a verified seller.',
+  'This artisan is setting up their storefront and will soon share more details about their creative journey.',
+  '🧵'
+from auth.users as users
+where coalesce(users.raw_user_meta_data->>'role', 'buyer') = 'seller' on conflict (id) do
+update
+set name = excluded.name;
 -- Enable RLS
 alter table public.sellers enable row level security;
 alter table public.products enable row level security;
@@ -177,6 +250,113 @@ if not exists (
   select 1
   from pg_policies
   where schemaname = 'public'
+    and tablename = 'sellers'
+    and policyname = 'sellers can insert own profile'
+) then create policy "sellers can insert own profile" on public.sellers for
+insert to authenticated with check (
+    auth.uid() is not null
+    and auth.uid()::text = id
+    and exists (
+      select 1
+      from public.clients
+      where public.clients.id = auth.uid()
+        and public.clients.role = 'seller'
+    )
+  );
+end if;
+if not exists (
+  select 1
+  from pg_policies
+  where schemaname = 'public'
+    and tablename = 'sellers'
+    and policyname = 'sellers can update own profile'
+) then create policy "sellers can update own profile" on public.sellers for
+update to authenticated using (
+    auth.uid() is not null
+    and auth.uid()::text = id
+    and exists (
+      select 1
+      from public.clients
+      where public.clients.id = auth.uid()
+        and public.clients.role = 'seller'
+    )
+  ) with check (
+    auth.uid() is not null
+    and auth.uid()::text = id
+    and exists (
+      select 1
+      from public.clients
+      where public.clients.id = auth.uid()
+        and public.clients.role = 'seller'
+    )
+  );
+end if;
+if not exists (
+  select 1
+  from pg_policies
+  where schemaname = 'public'
+    and tablename = 'products'
+    and policyname = 'sellers can insert own products'
+) then create policy "sellers can insert own products" on public.products for
+insert to authenticated with check (
+    auth.uid() is not null
+    and auth.uid()::text = "sellerId"
+    and exists (
+      select 1
+      from public.clients
+      where public.clients.id = auth.uid()
+        and public.clients.role = 'seller'
+    )
+  );
+end if;
+if not exists (
+  select 1
+  from pg_policies
+  where schemaname = 'public'
+    and tablename = 'products'
+    and policyname = 'sellers can update own products'
+) then create policy "sellers can update own products" on public.products for
+update to authenticated using (
+    auth.uid() is not null
+    and auth.uid()::text = "sellerId"
+    and exists (
+      select 1
+      from public.clients
+      where public.clients.id = auth.uid()
+        and public.clients.role = 'seller'
+    )
+  ) with check (
+    auth.uid() is not null
+    and auth.uid()::text = "sellerId"
+    and exists (
+      select 1
+      from public.clients
+      where public.clients.id = auth.uid()
+        and public.clients.role = 'seller'
+    )
+  );
+end if;
+if not exists (
+  select 1
+  from pg_policies
+  where schemaname = 'public'
+    and tablename = 'products'
+    and policyname = 'sellers can delete own products'
+) then create policy "sellers can delete own products" on public.products for delete to authenticated using (
+  auth.uid() is not null
+  and auth.uid()::text = "sellerId"
+  and exists (
+    select 1
+    from public.clients
+    where public.clients.id = auth.uid()
+      and public.clients.role = 'seller'
+  )
+);
+end if;
+if not exists (
+  select 1
+  from pg_policies
+  where schemaname = 'public'
     and tablename = 'clients'
     and policyname = 'clients can read own profile'
 ) then create policy "clients can read own profile" on public.clients for
@@ -204,12 +384,26 @@ end $$;
 -- Recreate order policies deterministically
 drop policy if exists "clients can read own orders" on public.orders;
 create policy "clients can read own orders" on public.orders for
-select to authenticated using (auth.uid() = "clientId");
+select to authenticated using (
+    auth.uid() = "clientId"
+    and exists (
+      select 1
+      from public.clients
+      where public.clients.id = auth.uid()
+        and public.clients.role = 'buyer'
+    )
+  );
 drop policy if exists "clients can insert own orders" on public.orders;
 create policy "clients can insert own orders" on public.orders for
 insert to authenticated with check (
     auth.uid() is not null
     and auth.uid() = "clientId"
+    and exists (
+      select 1
+      from public.clients
+      where public.clients.id = auth.uid()
+        and public.clients.role = 'buyer'
+    )
   );
 drop policy if exists "clients can read own order items" on public.order_items;
 create policy "clients can read own order items" on public.order_items for
@@ -220,6 +414,12 @@ select to authenticated using (
       where public.orders.id = "orderId"
         and public.orders."clientId" = auth.uid()
     )
+    and exists (
+      select 1
+      from public.clients
+      where public.clients.id = auth.uid()
+        and public.clients.role = 'buyer'
+    )
   );
 drop policy if exists "clients can insert own order items" on public.order_items;
 create policy "clients can insert own order items" on public.order_items for
@@ -229,6 +429,12 @@ insert to authenticated with check (
       from public.orders
       where public.orders.id = "orderId"
         and public.orders."clientId" = auth.uid()
+    )
+    and exists (
+      select 1
+      from public.clients
+      where public.clients.id = auth.uid()
+        and public.clients.role = 'buyer'
     )
   );
 commit;

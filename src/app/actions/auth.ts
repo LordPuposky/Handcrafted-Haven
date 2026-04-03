@@ -3,7 +3,9 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSiteUrl } from "@/lib/supabase/config";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseAdminClient, getSupabaseServerClient } from "@/lib/supabase/server";
+
+type UserRole = "buyer" | "seller";
 
 export type AuthFormState =
   | {
@@ -11,7 +13,7 @@ export type AuthFormState =
         name?: string[];
         email?: string[];
         password?: string[];
-        role?: string[]; 
+        role?: string[];
       };
       message?: string;
     }
@@ -19,17 +21,83 @@ export type AuthFormState =
 
 async function upsertClientProfile(
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
-  profile: { id: string; name: string; email: string; role: string } 
+  profile: { id: string; name: string; email: string; role: UserRole }
 ) {
-  await supabase.from("clients").upsert(
+  const { error } = await supabase.from("clients").upsert(
     {
       id: profile.id,
       name: profile.name,
       email: profile.email,
-      role: profile.role, 
+      role: profile.role,
     },
     { onConflict: "id" }
   );
+
+  if (!error) {
+    return;
+  }
+
+  if (!error.message.toLowerCase().includes("role")) {
+    console.error("Could not sync client profile.", {
+      userId: profile.id,
+      error,
+    });
+    return;
+  }
+
+  const { error: fallbackError } = await supabase.from("clients").upsert(
+    {
+      id: profile.id,
+      name: profile.name,
+      email: profile.email,
+    },
+    { onConflict: "id" }
+  );
+
+  if (fallbackError) {
+    console.error("Could not sync fallback client profile.", {
+      userId: profile.id,
+      error: fallbackError,
+    });
+  }
+}
+
+async function upsertSellerDirectoryProfile(
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
+  profile: { id: string; name: string; role: UserRole }
+) {
+  if (profile.role !== "seller") {
+    return;
+  }
+
+  const sellerRecord = {
+    id: profile.id,
+    name: profile.name,
+    location: "New artisan on Handcrafted Haven",
+    specialty: "Handcrafted creations",
+    bio: `${profile.name} recently joined Handcrafted Haven as a verified seller.`,
+    story:
+      "This artisan is setting up their storefront and will soon share more of their creative journey.",
+    avatarEmoji: "🧵",
+  };
+
+  try {
+    const admin = getSupabaseAdminClient();
+    const { error } = await admin.from("sellers").insert(sellerRecord);
+
+    if (error && !error.message.toLowerCase().includes("duplicate")) {
+      throw error;
+    }
+  } catch {
+    const { error: fallbackError } = await supabase.from("sellers").insert(sellerRecord);
+
+    if (fallbackError && !fallbackError.message.toLowerCase().includes("duplicate")) {
+      console.error("Could not sync seller directory profile.", {
+        userId: profile.id,
+        error: fallbackError,
+      });
+    }
+  }
 }
 
 function getSafeRedirectTarget(formData: FormData) {
@@ -67,7 +135,7 @@ export async function signup(
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const role = String(formData.get("role") ?? "").trim(); 
+  const role = String(formData.get("role") ?? "").trim() as UserRole;
 
   const errors: NonNullable<AuthFormState>["errors"] = {};
 
@@ -110,14 +178,22 @@ export async function signup(
     return { message: "Could not create account. Please try again." };
   }
 
-  if (data.user && data.session) {
+  if (data.user) {
     await upsertClientProfile(supabase, {
       id: data.user.id,
       name,
       email,
-      role, 
+      role,
     });
 
+    await upsertSellerDirectoryProfile(supabase, {
+      id: data.user.id,
+      name,
+      role,
+    });
+  }
+
+  if (data.user && data.session) {
     redirect(nextTarget);
   }
 
@@ -161,14 +237,23 @@ export async function login(
   }
 
   if (data.user) {
+    const resolvedName =
+      data.user.user_metadata?.full_name ??
+      data.user.email?.split("@")[0] ??
+      "User";
+    const resolvedRole: UserRole = data.user.user_metadata?.role === "seller" ? "seller" : "buyer";
+
     await upsertClientProfile(supabase, {
       id: data.user.id,
-      name:
-        data.user.user_metadata?.full_name ??
-        data.user.email?.split("@")[0] ??
-        "User",
+      name: resolvedName,
       email: data.user.email ?? email,
-      role: data.user.user_metadata?.role ?? "buyer", 
+      role: resolvedRole,
+    });
+
+    await upsertSellerDirectoryProfile(supabase, {
+      id: data.user.id,
+      name: resolvedName,
+      role: resolvedRole,
     });
   }
 

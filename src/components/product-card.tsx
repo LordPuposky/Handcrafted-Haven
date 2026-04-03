@@ -3,16 +3,23 @@ import { AddToCartButton } from "@/components/add-to-cart-button";
 import type { Product } from "@/data/marketplace";
 import { formatPrice, getStars } from "@/data/marketplace";
 import { getAverageRatingFromDb, getSellerByIdFromDb } from "@/data/marketplace-supabase";
+import { getCurrentAuthContext } from "@/lib/auth/authorization";
 
 type ProductCardProps = {
   product: Product;
+  showAddToCart?: boolean;
 };
 
-export async function ProductCard({ product }: ProductCardProps) {
-  const [seller, average] = await Promise.all([
+export async function ProductCard({
+  product,
+  showAddToCart = true,
+}: ProductCardProps) {
+  const [seller, average, authContext] = await Promise.all([
     getSellerByIdFromDb(product.sellerId),
     getAverageRatingFromDb(product.id),
+    getCurrentAuthContext(),
   ]);
+  const canPurchase = authContext.role !== "seller";
 
   return (
     <article className="card" aria-label={`Product ${product.title}`}>
@@ -35,7 +42,9 @@ export async function ProductCard({ product }: ProductCardProps) {
         <Link className="btn-secondary" href={`/products/${product.id}`}>
           View details
         </Link>
-        <AddToCartButton productId={product.id} className="btn-primary" />
+        {showAddToCart && canPurchase ? (
+          <AddToCartButton productId={product.id} className="btn-primary" />
+        ) : null}
       </div>
     </article>
   );
