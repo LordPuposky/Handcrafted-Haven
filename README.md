@@ -15,6 +15,7 @@ Team Members:
 - Amon Goes Roca
 - Yesid Augusto Romero Ruiz
 - Raphael Shawn Taurai
+- Leticia Mahomed de Sousa
 
 ## Colors
 
